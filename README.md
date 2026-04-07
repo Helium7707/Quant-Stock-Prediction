@@ -1,4 +1,4 @@
-First AI project.
+My first AI project.
 Based on quant stock prediction
 
 Web Framework: Streamlit (deployed via Streamlit Cloud)
