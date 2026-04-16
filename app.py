@@ -7,8 +7,8 @@ def calculate_rsi(data, window=14):
     delta = data.diff()
     gain = (delta.where(delta > 0, 0))
     loss = (-delta.where(delta < 0, 0))
-    avg_gain = gain.rolling(window=window).mean()
-    avg_loss = loss.rolling(window=window).mean()
+    avg_gain = gain.ewm(alpha=1/window, min_periods=window, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1/window, min_periods=window, adjust=False).mean()
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 @st.cache_data 
@@ -21,11 +21,13 @@ def get_clean_data():
     df['Daily_Return_Percentage'] = df['Close'].pct_change() * 100
     df['SMA_20'] = df['Close'].rolling(window=20).mean()
     df['RSI_14'] = calculate_rsi(df['Close'])
-    df['Target'] = (df['Close'].shift(-1) > df['Close']).astype(int)
+    df['Target'] = (df['Close'].shift(-1) > df['Close'])
+    df.loc[df.index[-1], 'Target'] = pd.NA 
     macro = yf.download(['INR=X', 'CL=F', '^INDIAVIX'], start="2022-01-01")['Close']
     df = df.join(macro)
     df.rename(columns={'INR=X': 'USD_INR', 'CL=F': 'Crude_Oil', '^INDIAVIX': 'Fear_Checker'}, inplace=True)
-    
+    df['USD_INR'] = df['USD_INR'].pct_change() * 100
+    df['Crude_Oil'] = df['Crude_Oil'].pct_change() * 100
     df.ffill(inplace=True)
     return df.dropna()
 
@@ -47,17 +49,14 @@ st.metric("Nifty 50 Live (Approx)", f"₹{current_price:,.2f}", f"{price_diff:,.
 
 # train model
 features = ['Daily_Return_Percentage', 'SMA_20', 'RSI_14', 'USD_INR', 'Crude_Oil', 'Fear_Checker']
-X = df[features]
-y = df['Target']
-
+X_train = df[features].iloc[:-1]
+y_train = df['Target'].iloc[:-1].astype(int) 
 model = RandomForestClassifier(n_estimators=100, min_samples_split=50, random_state=1)
-model.fit(X.iloc[:-1], y.iloc[:-1])
-
-# Predict for today
-current_features = X.tail(1)
+model.fit(X_train, y_train)
+current_features = df[features].iloc[[-1]] 
 prediction = model.predict(current_features)[0]
 
-# Show Prediction
+# this is prediction
 st.subheader("AI Prediction for Tomorrow")
 if prediction == 1:
     st.success("✅ BULLISH: The AI predicts the market will go UP.")
