@@ -22,7 +22,7 @@ def get_clean_data():
     df['Daily_Return_Percentage'] = df['Close'].pct_change() * 100
     df['SMA_20'] = df['Close'].rolling(window=20).mean()
     df['RSI_14'] = calculate_rsi(df['Close'])
-    df['Target'] = (df['Close'].shift(-1) > df['Close'])
+    df['Target'] = (df['Close'].shift(-1) > df['Close']).astype(float)
     df.loc[df.index[-1], 'Target'] = np.nan 
     macro = yf.download(['INR=X', 'CL=F', '^INDIAVIX'], start="2022-01-01")['Close']
     df = df.join(macro)
