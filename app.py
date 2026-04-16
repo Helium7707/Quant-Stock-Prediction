@@ -3,6 +3,7 @@ import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestClassifier
+import numpy as np
 def calculate_rsi(data, window=14):
     delta = data.diff()
     gain = (delta.where(delta > 0, 0))
@@ -22,7 +23,7 @@ def get_clean_data():
     df['SMA_20'] = df['Close'].rolling(window=20).mean()
     df['RSI_14'] = calculate_rsi(df['Close'])
     df['Target'] = (df['Close'].shift(-1) > df['Close'])
-    df.loc[df.index[-1], 'Target'] = pd.NA 
+    df.loc[df.index[-1], 'Target'] = np.nan 
     macro = yf.download(['INR=X', 'CL=F', '^INDIAVIX'], start="2022-01-01")['Close']
     df = df.join(macro)
     df.rename(columns={'INR=X': 'USD_INR', 'CL=F': 'Crude_Oil', '^INDIAVIX': 'Fear_Checker'}, inplace=True)
